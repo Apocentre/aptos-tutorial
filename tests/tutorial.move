@@ -2,6 +2,7 @@
 module tutorial::ticket_test {
   use std::signer;
   use std::vector;
+  use std::math64;
   use aptos_framework::account;
   use aptos_framework::managed_coin;
   use aptos_framework::coin;
@@ -16,6 +17,7 @@ module tutorial::ticket_test {
     available_tickets,
     venue_exists,
     get_ticket_info,
+    purchase_ticket,
   };
 
   struct USDC {}
@@ -23,11 +25,14 @@ module tutorial::ticket_test {
   struct NOT_SUPPORTED {}
 
   const DECIMALS: u8 = 6;
-  const UNIT: u64 = 10 ^ 6;
+
+  fun to_base(val: u64): u64 {
+    val * math64::pow(10, 6)
+  }
 
   // create coin types that will be used in our tests. These are all the coins the one can use
   // to purchase a ticket
-  fun create_test_coins(owner: &signer, buyers: &vector<signer>): vector<TypeInfo>{
+  fun create_test_coins(owner: &signer, venue_owner: &signer, buyers: &vector<signer>): vector<TypeInfo>{
     managed_coin::initialize<USDC>(
       owner,
       b"USDC",
@@ -50,7 +55,6 @@ module tutorial::ticket_test {
       false,
     );
 
-
     // fund the buyers' accounts
     let count = vector::length<signer>(buyers);
     let i = 0;
@@ -61,24 +65,28 @@ module tutorial::ticket_test {
       account::create_account_for_test(buyer_address);
       
       coin::register<USDC>(buyer);
-      managed_coin::mint<USDC>(owner, buyer_address, 100 * UNIT);
+      managed_coin::mint<USDC>(owner, buyer_address, to_base(100));
       coin::register<USDT>(buyer);
-      managed_coin::mint<USDT>(owner, buyer_address, 100 * UNIT);
+      managed_coin::mint<USDT>(owner, buyer_address, to_base(100));
       coin::register<NOT_SUPPORTED>(buyer);
-      managed_coin::mint<NOT_SUPPORTED>(owner, buyer_address, 100 * UNIT);
+      managed_coin::mint<NOT_SUPPORTED>(owner, buyer_address, to_base(100));
 
       i = i + 1;
     };
+    
+    // register the venue owner as well as it will be receiving the funds from the purchase
+    account::create_account_for_test(signer::address_of(venue_owner));
+    coin::register<USDT>(venue_owner);
+    coin::register<USDC>(venue_owner);
+    coin::register<NOT_SUPPORTED>(venue_owner);
 
-    let supported_coins = vector::empty<TypeInfo>();
-    vector::push_back(&mut supported_coins, type_of<USDC>());
-    vector::push_back(&mut supported_coins, type_of<USDC>());
+    let supported_coins = vector[type_of<USDC>(), type_of<USDT>()];
 
     supported_coins
   }
 
-  fun test_initialize(owner: &signer, buyers: vector<signer>) {
-    let supported_coins = create_test_coins(owner, &buyers);
+  fun test_initialize(owner: &signer, venue_owner: &signer, buyers: &vector<signer>) {
+    let supported_coins = create_test_coins(owner, venue_owner, buyers);
     initialize(owner, supported_coins);
   }
   
@@ -124,10 +132,37 @@ module tutorial::ticket_test {
   #[test(owner = @tutorial, venue_owner = @0xb, buyer1 = @0xc, buyer2 = @0xd)]
   fun should_allow_purchase(owner: signer, venue_owner: signer, buyer1: signer, buyer2: signer) {
     create_venue(&venue_owner, 100000);
-    let buyers = vector::empty<signer>();
-    vector::push_back(&mut buyers, buyer1);
-    vector::push_back(&mut buyers, buyer2);
+    create_ticket(&venue_owner, b"seat_1", b"ticket_code_1", to_base(10));
+    create_ticket(&venue_owner, b"seat_2", b"ticket_code_2", to_base(20));
+    
+    let buyers = vector [buyer1, buyer2];
+    test_initialize(&owner, &venue_owner, &buyers);
+    
+    purchase_ticket<USDC>(
+      vector::borrow(&buyers, 0),
+      signer::address_of(&owner),
+      signer::address_of(&venue_owner),
+      b"seat_1",
+    );
 
-    test_initialize(&owner, buyers);
+    let balance = coin::balance<USDC>(signer::address_of(&venue_owner));
+    assert!(balance == to_base(10), 1);
+  }
+
+  #[test(owner = @tutorial, venue_owner = @0xb, buyer = @0xc)]
+  #[expected_failure(abort_code = 8)]
+  fun should_fail_if_purchase_with_unsopported_coint(owner: signer, venue_owner: signer, buyer: signer) {
+    create_venue(&venue_owner, 100000);
+    create_ticket(&venue_owner, b"seat_1", b"ticket_code_1", to_base(10));
+    
+    let buyers = vector [buyer];
+    test_initialize(&owner, &venue_owner, &buyers);
+    
+    purchase_ticket<NOT_SUPPORTED>(
+      vector::borrow(&buyers, 0),
+      signer::address_of(&owner),
+      signer::address_of(&venue_owner),
+      b"seat_1",
+    );
   }
 }
