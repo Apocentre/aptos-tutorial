@@ -27,4 +27,9 @@ module tutorial::ticket {
   public fun venue_exists(addr: address): bool {
     exists<Venue>(addr)
   }
+
+  public fun available_tickets(venue_owner: address): u64 acquires Venue {
+    let venue = borrow_global<Venue>(venue_owner);
+    vector::length(&venue.available_tickets)
+  }
 }
