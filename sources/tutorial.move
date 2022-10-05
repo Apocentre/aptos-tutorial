@@ -1,6 +1,10 @@
 module tutorial::ticket {
-  use std::vector;
   use std::signer;
+  use std::table_with_length::{
+    Self,
+    new as NewTable,
+    TableWithLength,
+  };
 
   const VENUE_DOES_NOT_EXIST: u64 = 0;
   const ENO_TICKETS: u64 = 1;
@@ -18,13 +22,13 @@ module tutorial::ticket {
   }
 
   struct Venue has key {
-    available_tickets: vector<Ticket>,
+    tickets: TableWithLength<vector<u8>, Ticket>,
     max_seats: u64,
   }
 
   public fun create_venue(venue_owner: &signer, max_seats: u64) {
-    let available_tickets = vector::empty<Ticket>();
-    move_to(venue_owner, Venue {available_tickets, max_seats});
+    let tickets = NewTable<vector<u8>, Ticket>();
+    move_to(venue_owner, Venue {tickets, max_seats});
   }
 
   public fun create_ticket(
@@ -40,8 +44,7 @@ module tutorial::ticket {
     let venue = borrow_global_mut<Venue>(venue_owner_addr);
     assert!(ticket_count <= venue.max_seats, MAX_VENUE_SEATS);
     
-    vector::push_back(&mut venue.available_tickets, Ticket {seat, ticket_code, price});
-    // move_to(recipient, Ticket {seat, ticket_code});
+    table_with_length::add(&mut venue.tickets, seat, Ticket {seat, ticket_code, price});
   }
 
   public fun venue_exists(addr: address): bool {
@@ -50,6 +53,11 @@ module tutorial::ticket {
 
   public fun available_tickets(venue_owner: address): u64 acquires Venue {
     let venue = borrow_global<Venue>(venue_owner);
-    vector::length(&venue.available_tickets)
+    table_with_length::length(&venue.tickets)
   }
+
+  // public fun get_ticket_info(venue_owner: address, seat: vector<u8>): (bool, vector<u8>, u64, u64) {
+  //   let venue = borrow_global<Venue>(venue_owner);
+  //   let (found, index_of) = vector::index_of()
+  // }
 }
