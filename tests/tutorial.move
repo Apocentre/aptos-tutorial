@@ -16,6 +16,9 @@ module tutorial::ticket_test {
   struct USDC {}
   struct USDT {}
 
+  const DECIMALS: u8 = 6;
+  const UNIT: u64 = 10 ^ 6;
+
   // create coin types that will be used in our tests. These are all the coins the one can use
   // to purchase a ticket
   fun create_test_coins(owner: &signer, buyers: &vector<signer>): vector<address>{
@@ -23,14 +26,14 @@ module tutorial::ticket_test {
       owner,
       b"USDC",
       b"USDC",
-      6,
+      DECIMALS,
       false,
     );
     managed_coin::initialize<USDT>(
       owner,
       b"USDT",
       b"USDT",
-      6,
+      DECIMALS,
       false,
     );
 
@@ -41,7 +44,11 @@ module tutorial::ticket_test {
     while (i < count) {
       let buyer = vector::borrow<signer>(buyers, i);
       coin::register<USDC>(buyer);
-      coin::register<USDC>(buyer);
+      managed_coin::mint<USDC>(owner, signer::address_of(buyer), 100 * UNIT);
+
+      coin::register<USDT>(buyer);
+      coin::register<USDT>(buyer);
+      managed_coin::mint<USDT>(owner, signer::address_of(buyer), 100 * UNIT);
     };
 
     let supported_coins = vector::empty<address>();
