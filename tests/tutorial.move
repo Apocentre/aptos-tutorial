@@ -1,13 +1,54 @@
 #[test_only]
 module tutorial::ticket_test {
   use std::signer;
+  use std::option;
+  use std::type_info::TypeInfo;
+  use aptos_framework::managed_coin;
+  use aptos_framework::coin;
   use tutorial::ticket::{
+    initialize,
     create_ticket,
     create_venue,
     available_tickets,
     venue_exists,
     get_ticket_info,
   };
+
+  struct USDC {}
+  struct USDT {}
+
+  // create coin types that will be used in our tests. These are all the coins the one can use
+  // to purchase a ticket
+  fun create_test_coins(owner: &signer, ): vector<TypeInfo>{
+    managed_coin::initialize<USDC>(
+      owner,
+      b"USDC",
+      b"USDC",
+      6,
+      false,
+    );
+    managed_coin::initialize<USDT>(
+      owner,
+      b"USDT",
+      b"USDT",
+      6,
+      false,
+    );
+
+    // fund the buyers' accounts
+    coint.mmit
+
+    let supported_coins = vector::empty<CoinInfo>();
+    supported_coins.push_back(&mut supported_coins, type_of<USDC>);
+    supported_coins.push_back(&mut supported_coins, type_of<USDT>);
+
+    supported_coins
+  }
+
+  fun test_initialize(owner: &signer) {
+    let supported_coins = create_test_coins(&owner);
+    initialize(owner, supported_coins);
+  }
   
   #[test(venue_owner = @0x0123)]
   #[expected_failure(abort_code = 0)]
