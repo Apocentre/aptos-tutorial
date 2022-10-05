@@ -18,6 +18,7 @@ module tutorial::ticket_test {
     venue_exists,
     get_ticket_info,
     purchase_ticket,
+    get_user_ticket,
   };
 
   struct USDC {}
@@ -145,8 +146,16 @@ module tutorial::ticket_test {
       b"seat_1",
     );
 
+    // check that venue owner received the ticke price
     let balance = coin::balance<USDC>(signer::address_of(&venue_owner));
     assert!(balance == to_base(10), 1);
+
+    // check that ticket resource is owned by the buyer
+    let buyer = signer::address_of(vector::borrow(&buyers, 0));
+    let (seat, ticket_code, price) = get_user_ticket(buyer, 0);
+    assert!(seat == b"seat_1", 1);
+    assert!(ticket_code == b"ticket_code_1", 1);
+    assert!(price == to_base(10), 1);
   }
 
   #[test(owner = @tutorial, venue_owner = @0xb, buyer = @0xc)]

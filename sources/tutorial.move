@@ -130,4 +130,9 @@ module tutorial::ticket {
 
     (*seat, *ticket_code, *price)
   }
+
+  public fun get_user_ticket_count(account: address): u64 acquires TicketEnvelope {
+    let TicketEnvelope {tickets} = borrow_global<TicketEnvelope>(account);
+    vector::length(tickets)
+  }
 }
