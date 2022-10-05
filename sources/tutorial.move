@@ -1,6 +1,11 @@
 module tutorial::ticket {
   use std::signer;
   use std::vector;
+  use std::type_info::{
+    TypeInfo,
+    type_of,
+  };
+  use aptos_framework::coin;
   use std::table_with_length::{
     Self as table,
     new as NewTable,
@@ -15,7 +20,13 @@ module tutorial::ticket {
   const EINVALID_PRICE: u64 = 5;
   const MAX_VENUE_SEATS: u64 = 6;
   const EINVALID_BALANCE: u64 = 7;
-  
+  const UNSUPPORTED_COIN: u64 = 8;
+
+  struct State has key {
+    supported_coins: vector<TypeInfo>,
+    owner: address,
+  }
+
   struct Ticket has key, store {
     seat: vector<u8>,
     ticket_code: vector<u8>,
@@ -32,12 +43,21 @@ module tutorial::ticket {
     tickets: vector<Ticket>,
   }
 
-  public fun create_venue(venue_owner: &signer, max_seats: u64) {
+  public entry fun initialize(owner: &signer, supported_coins: vector<TypeInfo>) {
+    let owner_addr = signer::address_of(owner);
+    
+    move_to(owner, State {
+      supported_coins,
+      owner: owner_addr,
+    })
+  }
+
+  public entry fun create_venue(venue_owner: &signer, max_seats: u64) {
     let tickets = NewTable<vector<u8>, Ticket>();
     move_to(venue_owner, Venue {tickets, max_seats});
   }
 
-  public fun create_ticket(
+  public entry fun create_ticket(
     venue_owner: &signer,
     seat: vector<u8>,
     ticket_code: vector<u8>,
@@ -74,16 +94,23 @@ module tutorial::ticket {
     (true, *ticket_code, *price)
   }
 
-  public fun purchase_ticket(buyer: &signer, venue_owner: address, seat: vector<u8>) acquires Venue, TicketEnvelope {
+  public entry fun purchase_ticket<CoinType>(
+    buyer: &signer,
+    state_owner: address,
+    venue_owner: address,
+    seat: vector<u8>
+  ) acquires State, Venue, TicketEnvelope {
     let buyer_addr = signer::address_of(buyer);
     
     // make sure ticket exists
-    let (success, _, _) = get_ticket_info(venue_owner, seat);
+    let (success, _, price) = get_ticket_info(venue_owner, seat);
     assert!(success, EINVALID_TICKET);
 
     let venue = borrow_global_mut<Venue>(venue_owner);
-    // TODO: how can we choose which Token can be used
-    // TestCoin::transfer_internal(buyer, venue_owner_addr, price);
+    let state = borrow_global<State>(state_owner);
+
+    assert!(vector::contains(&state.supported_coins, &type_of<CoinType>()), UNSUPPORTED_COIN);
+    coin::transfer<CoinType>(buyer, venue_owner, price);
 
     let ticket = table::remove(&mut venue.tickets, seat);
     if(!exists<TicketEnvelope>(buyer_addr)) {
