@@ -1,7 +1,10 @@
 module tutorial::ticket {
   use std::signer;
   use std::vector;
-  use std::type_info::{account_address, type_of};
+  use std::type_info::{
+    TypeInfo,
+    type_of,
+  };
   use aptos_framework::coin;
   use std::table_with_length::{
     Self as table,
@@ -20,7 +23,7 @@ module tutorial::ticket {
   const UNSUPPORTED_COIN: u64 = 8;
 
   struct State has key {
-    supported_coins: vector<address>,
+    supported_coins: vector<TypeInfo>,
     owner: address,
   }
 
@@ -40,7 +43,7 @@ module tutorial::ticket {
     tickets: vector<Ticket>,
   }
 
-  public entry fun initialize(owner: &signer, supported_coins: vector<address>) {
+  public entry fun initialize(owner: &signer, supported_coins: vector<TypeInfo>) {
     let owner_addr = signer::address_of(owner);
     
     move_to(owner, State {
@@ -106,8 +109,7 @@ module tutorial::ticket {
     let venue = borrow_global_mut<Venue>(venue_owner);
     let state = borrow_global<State>(state_owner);
 
-    
-    assert!(vector::contains(&state.supported_coins, &account_address(&type_of<CoinType>())), UNSUPPORTED_COIN);
+    assert!(vector::contains(&state.supported_coins, &type_of<CoinType>()), UNSUPPORTED_COIN);
     coin::transfer<CoinType>(buyer, venue_owner, price);
 
     let ticket = table::remove(&mut venue.tickets, seat);

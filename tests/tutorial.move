@@ -2,8 +2,13 @@
 module tutorial::ticket_test {
   use std::signer;
   use std::vector;
+  use aptos_framework::account;
   use aptos_framework::managed_coin;
   use aptos_framework::coin;
+  use std::type_info::{
+    TypeInfo,
+    type_of,
+  };
   use tutorial::ticket::{
     initialize,
     create_ticket,
@@ -15,13 +20,14 @@ module tutorial::ticket_test {
 
   struct USDC {}
   struct USDT {}
+  struct NOT_SUPPORTED {}
 
   const DECIMALS: u8 = 6;
   const UNIT: u64 = 10 ^ 6;
 
   // create coin types that will be used in our tests. These are all the coins the one can use
   // to purchase a ticket
-  fun create_test_coins(owner: &signer, buyers: &vector<signer>): vector<address>{
+  fun create_test_coins(owner: &signer, buyers: &vector<signer>): vector<TypeInfo>{
     managed_coin::initialize<USDC>(
       owner,
       b"USDC",
@@ -36,6 +42,14 @@ module tutorial::ticket_test {
       DECIMALS,
       false,
     );
+    managed_coin::initialize<NOT_SUPPORTED>(
+      owner,
+      b"NOT_SUPPORTED",
+      b"BTC",
+      DECIMALS,
+      false,
+    );
+
 
     // fund the buyers' accounts
     let count = vector::length<signer>(buyers);
@@ -43,17 +57,22 @@ module tutorial::ticket_test {
 
     while (i < count) {
       let buyer = vector::borrow<signer>(buyers, i);
+      let buyer_address = signer::address_of(buyer);
+      account::create_account_for_test(buyer_address);
+      
       coin::register<USDC>(buyer);
-      managed_coin::mint<USDC>(owner, signer::address_of(buyer), 100 * UNIT);
+      managed_coin::mint<USDC>(owner, buyer_address, 100 * UNIT);
+      coin::register<USDT>(buyer);
+      managed_coin::mint<USDT>(owner, buyer_address, 100 * UNIT);
+      coin::register<NOT_SUPPORTED>(buyer);
+      managed_coin::mint<NOT_SUPPORTED>(owner, buyer_address, 100 * UNIT);
 
-      coin::register<USDT>(buyer);
-      coin::register<USDT>(buyer);
-      managed_coin::mint<USDT>(owner, signer::address_of(buyer), 100 * UNIT);
+      i = i + 1;
     };
 
-    let supported_coins = vector::empty<address>();
-    vector::push_back(&mut supported_coins, @tutorial);
-    vector::push_back(&mut supported_coins, @tutorial);
+    let supported_coins = vector::empty<TypeInfo>();
+    vector::push_back(&mut supported_coins, type_of<USDC>());
+    vector::push_back(&mut supported_coins, type_of<USDC>());
 
     supported_coins
   }
@@ -77,7 +96,7 @@ module tutorial::ticket_test {
     create_ticket(&venue_owner, b"seat_3", b"ticket_code_3", 300);
 
     let venue_owner_addr = signer::address_of(&venue_owner);
-    aptos_framework::account::create_account_for_test(venue_owner_addr);
+    account::create_account_for_test(venue_owner_addr);
     assert!(available_tickets(venue_owner_addr) == 3, 1);
 
     // test ticket values
@@ -98,7 +117,17 @@ module tutorial::ticket_test {
   fun should_create_venue(venue_owner: signer) {
     create_venue(&venue_owner, 100000);
     let venue_owner_addr = signer::address_of(&venue_owner);
-    aptos_framework::account::create_account_for_test(venue_owner_addr);
+    account::create_account_for_test(venue_owner_addr);
     assert!(venue_exists(venue_owner_addr), 1);
+  }
+
+  #[test(owner = @tutorial, venue_owner = @0xb, buyer1 = @0xc, buyer2 = @0xd)]
+  fun should_allow_purchase(owner: signer, venue_owner: signer, buyer1: signer, buyer2: signer) {
+    create_venue(&venue_owner, 100000);
+    let buyers = vector::empty<signer>();
+    vector::push_back(&mut buyers, buyer1);
+    vector::push_back(&mut buyers, buyer2);
+
+    test_initialize(&owner, buyers);
   }
 }
