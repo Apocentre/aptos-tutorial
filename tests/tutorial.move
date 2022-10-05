@@ -6,6 +6,7 @@ module tutorial::ticket_test {
     create_venue,
     available_tickets,
     venue_exists,
+    get_ticket_info,
   };
   
   #[test(venue_owner = @0x0123)]
@@ -25,6 +26,18 @@ module tutorial::ticket_test {
     aptos_framework::account::create_account_for_test(venue_owner_addr);
     assert!(available_tickets(venue_owner_addr) == 3, 1);
 
+    // test ticket values
+    let (_, ticket_code, price) = get_ticket_info(venue_owner_addr, b"seat_1");
+    assert!(ticket_code == b"ticket_code_1", 5);
+    assert!(price == 100, 0);
+
+    let (_, ticket_code, price) = get_ticket_info(venue_owner_addr, b"seat_2");
+    assert!(ticket_code == b"ticket_code_2", 5);
+    assert!(price == 200, 0);
+
+    let (_, ticket_code, price) = get_ticket_info(venue_owner_addr, b"seat_3");
+    assert!(ticket_code == b"ticket_code_3", 5);
+    assert!(price == 300, 0);
   }
   
   #[test(venue_owner = @0x0123)]

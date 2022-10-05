@@ -58,12 +58,13 @@ module tutorial::ticket {
 
   public fun get_ticket_info(venue_owner: address, seat: vector<u8>): (bool, vector<u8>, u64) acquires Venue {
     let venue = borrow_global<Venue>(venue_owner);
-    let ticket = table::borrow(&venue.tickets, seat);
+
+    if(!table::contains(&venue.tickets, seat)) {
+      return (false, b"", 0)
+    };
+
+    let Ticket {seat: _, ticket_code, price} = table::borrow(&venue.tickets, seat);
     
-    (
-      true,
-      ticket.ticket_code,
-      ticket.price,
-    )
+    (true, *ticket_code, *price)
   }
 }
