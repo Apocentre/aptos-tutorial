@@ -43,7 +43,7 @@ module tutorial::ticket {
     tickets: vector<Ticket>,
   }
 
-  public entry fun initialize(owner: &signer, supported_coins: vector<TypeInfo>) {
+  public fun initialize(owner: &signer, supported_coins: vector<TypeInfo>) {
     let owner_addr = signer::address_of(owner);
     
     move_to(owner, State {
@@ -52,12 +52,12 @@ module tutorial::ticket {
     })
   }
 
-  public entry fun create_venue(venue_owner: &signer, max_seats: u64) {
+  public fun create_venue(venue_owner: &signer, max_seats: u64) {
     let tickets = NewTable<vector<u8>, Ticket>();
     move_to(venue_owner, Venue {tickets, max_seats});
   }
 
-  public entry fun create_ticket(
+  public fun create_ticket(
     venue_owner: &signer,
     seat: vector<u8>,
     ticket_code: vector<u8>,
@@ -94,7 +94,7 @@ module tutorial::ticket {
     (true, *ticket_code, *price)
   }
 
-  public entry fun purchase_ticket<CoinType>(
+  public fun purchase_ticket<CoinType>(
     buyer: &signer,
     state_owner: address,
     venue_owner: address,
@@ -119,5 +119,15 @@ module tutorial::ticket {
 
     let envelope = borrow_global_mut<TicketEnvelope>(buyer_addr);
     vector::push_back(&mut envelope.tickets, ticket);
+  }
+
+  public fun get_user_ticket(
+    account: address,
+    index: u64,
+  ): (vector<u8>, vector<u8>, u64) acquires TicketEnvelope {
+    let TicketEnvelope {tickets} = borrow_global<TicketEnvelope>(account);
+    let Ticket {seat, ticket_code, price} = vector::borrow(tickets, index);
+
+    (*seat, *ticket_code, *price)
   }
 }
