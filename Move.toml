@@ -1,0 +1,10 @@
+[package]
+name = "Tutorial"
+version = "1.0.0"
+
+[addresses]
+# placeholder change this to the real address
+tutorial = "0x2" 
+
+[dependencies]
+AptosFramework = { git = "https://github.com/aptos-labs/aptos-core.git", rev = "main", subdir = "aptos-move/framework/aptos-framework"}
