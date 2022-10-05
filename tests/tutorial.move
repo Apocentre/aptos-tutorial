@@ -1,8 +1,7 @@
 #[test_only]
 module tutorial::ticket_test {
   use std::signer;
-  use std::option;
-  use std::type_info::TypeInfo;
+  use std::vector;
   use aptos_framework::managed_coin;
   use aptos_framework::coin;
   use tutorial::ticket::{
@@ -19,7 +18,7 @@ module tutorial::ticket_test {
 
   // create coin types that will be used in our tests. These are all the coins the one can use
   // to purchase a ticket
-  fun create_test_coins(owner: &signer, ): vector<TypeInfo>{
+  fun create_test_coins(owner: &signer, buyers: &vector<signer>): vector<address>{
     managed_coin::initialize<USDC>(
       owner,
       b"USDC",
@@ -36,17 +35,24 @@ module tutorial::ticket_test {
     );
 
     // fund the buyers' accounts
-    coint.mmit
+    let count = vector::length<signer>(buyers);
+    let i = 0;
 
-    let supported_coins = vector::empty<CoinInfo>();
-    supported_coins.push_back(&mut supported_coins, type_of<USDC>);
-    supported_coins.push_back(&mut supported_coins, type_of<USDT>);
+    while (i < count) {
+      let buyer = vector::borrow<signer>(buyers, i);
+      coin::register<USDC>(buyer);
+      coin::register<USDC>(buyer);
+    };
+
+    let supported_coins = vector::empty<address>();
+    vector::push_back(&mut supported_coins, @tutorial);
+    vector::push_back(&mut supported_coins, @tutorial);
 
     supported_coins
   }
 
-  fun test_initialize(owner: &signer) {
-    let supported_coins = create_test_coins(&owner);
+  fun test_initialize(owner: &signer, buyers: vector<signer>) {
+    let supported_coins = create_test_coins(owner, &buyers);
     initialize(owner, supported_coins);
   }
   
