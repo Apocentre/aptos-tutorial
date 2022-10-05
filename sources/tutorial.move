@@ -1,7 +1,7 @@
 module tutorial::ticket {
   use std::signer;
   use std::table_with_length::{
-    Self,
+    Self as table,
     new as NewTable,
     TableWithLength,
   };
@@ -44,7 +44,7 @@ module tutorial::ticket {
     let venue = borrow_global_mut<Venue>(venue_owner_addr);
     assert!(ticket_count <= venue.max_seats, MAX_VENUE_SEATS);
     
-    table_with_length::add(&mut venue.tickets, seat, Ticket {seat, ticket_code, price});
+    table::add(&mut venue.tickets, seat, Ticket {seat, ticket_code, price});
   }
 
   public fun venue_exists(addr: address): bool {
@@ -53,11 +53,17 @@ module tutorial::ticket {
 
   public fun available_tickets(venue_owner: address): u64 acquires Venue {
     let venue = borrow_global<Venue>(venue_owner);
-    table_with_length::length(&venue.tickets)
+    table::length(&venue.tickets)
   }
 
-  // public fun get_ticket_info(venue_owner: address, seat: vector<u8>): (bool, vector<u8>, u64, u64) {
-  //   let venue = borrow_global<Venue>(venue_owner);
-  //   let (found, index_of) = vector::index_of()
-  // }
+  public fun get_ticket_info(venue_owner: address, seat: vector<u8>): (bool, vector<u8>, u64) acquires Venue {
+    let venue = borrow_global<Venue>(venue_owner);
+    let ticket = table::borrow(&venue.tickets, seat);
+    
+    (
+      true,
+      ticket.ticket_code,
+      ticket.price,
+    )
+  }
 }
