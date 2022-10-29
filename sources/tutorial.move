@@ -22,6 +22,8 @@ module tutorial::ticket {
   const EINVALID_BALANCE: u64 = 7;
   const UNSUPPORTED_COIN: u64 = 8;
 
+  struct DeleteMe has copy, drop {}
+
   struct State has key {
     supported_coins: vector<TypeInfo>,
     owner: address,
@@ -34,6 +36,7 @@ module tutorial::ticket {
   }
 
   struct Venue has key {
+    // seat -> Ticket
     tickets: TableWithLength<vector<u8>, Ticket>,
     max_seats: u64,
   }

@@ -19,6 +19,7 @@ module tutorial::ticket_test {
     get_ticket_info,
     purchase_ticket,
     get_user_ticket,
+    DeleteMe,
   };
 
   struct USDC {}
@@ -86,7 +87,7 @@ module tutorial::ticket_test {
     supported_coins
   }
 
-  fun test_initialize(owner: &signer, venue_owner: &signer, buyers: &vector<signer>) {
+  fun run_initialize(owner: &signer, venue_owner: &signer, buyers: &vector<signer>) {
     let supported_coins = create_test_coins(owner, venue_owner, buyers);
     initialize(owner, supported_coins);
   }
@@ -137,7 +138,7 @@ module tutorial::ticket_test {
     create_ticket(&venue_owner, b"seat_2", b"ticket_code_2", to_base(20));
     
     let buyers = vector [buyer1, buyer2];
-    test_initialize(&owner, &venue_owner, &buyers);
+    run_initialize(&owner, &venue_owner, &buyers);
     
     purchase_ticket<USDC>(
       vector::borrow(&buyers, 0),
@@ -165,7 +166,7 @@ module tutorial::ticket_test {
     create_ticket(&venue_owner, b"seat_1", b"ticket_code_1", to_base(10));
     
     let buyers = vector [buyer];
-    test_initialize(&owner, &venue_owner, &buyers);
+    run_initialize(&owner, &venue_owner, &buyers);
     
     purchase_ticket<NOT_SUPPORTED>(
       vector::borrow(&buyers, 0),
